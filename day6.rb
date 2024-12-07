@@ -32,12 +32,11 @@ def try_maze(maze)
     next_pos = step(guard_pos, guard)
     return false if next_pos.nil?
 
-    if maze[next_pos] == "#"
+    while maze[next_pos] == "#"
       guard = GUARD_MAP[guard]
       next_pos = step(guard_pos, guard)
       return false if next_pos.nil?
     end
-
 
     return true if maze[next_pos] == DIR_MAP[guard]
 
