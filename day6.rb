@@ -1,5 +1,7 @@
 INPUT = ARGF.read
 
+CHARS = INPUT.chars
+
 COLS = INPUT.split("\n").first.length
 
 def step(guard_pos, guard)
@@ -16,25 +18,42 @@ def step(guard_pos, guard)
   next_pos
 end
 
-loop do
-  guard_pos = INPUT =~ /\^|v|>|</
-  guard = INPUT[guard_pos]
+DIR_MAP = { '^' => 'u', '>' => 'r', 'v' => 'd', '<' => 'l' }
+GUARD_MAP = { '^' => '>', '>' => 'v', 'v' => '<', '<' => '^' } 
 
-  INPUT[guard_pos] = 'o'
+def try_maze(maze)
+  guard_pos = maze.find_index { DIR_MAP.keys.include?(_1) }
 
-  next_pos = step(guard_pos, guard)
-  break if next_pos.nil?
+  loop do
+    guard = maze[guard_pos]
 
-  if INPUT[next_pos] == "#"
-    guard = { '^' => '>', '>' => 'v', 'v' => '<', '<' => '^' }[guard]
+    maze[guard_pos] = DIR_MAP[guard]
+
     next_pos = step(guard_pos, guard)
-    break if next_pos.nil?
+    return false if next_pos.nil?
+
+    if maze[next_pos] == "#"
+      guard = GUARD_MAP[guard]
+      next_pos = step(guard_pos, guard)
+      return false if next_pos.nil?
+    end
+
+
+    return true if maze[next_pos] == DIR_MAP[guard]
+
+    maze[next_pos] = guard
+    guard_pos = next_pos
   end
-
-  INPUT[next_pos] = guard
-
-  puts INPUT
-  puts
 end
 
-puts INPUT.count('o')
+puts (CHARS.each_index.count do |i|
+  puts "#{i.to_s.rjust(5)} / #{INPUT.length}"
+
+  next false if CHARS[i] != '.'
+
+  maze = CHARS.dup.tap { _1[i] = '#' }
+
+  next false unless try_maze(maze)
+
+  true
+end)
