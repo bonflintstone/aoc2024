@@ -46,8 +46,6 @@ def try_maze(maze)
 end
 
 puts (CHARS.each_index.count do |i|
-  puts "#{i.to_s.rjust(5)} / #{INPUT.length}"
-
   next false if CHARS[i] != '.'
 
   maze = CHARS.dup.tap { _1[i] = '#' }
