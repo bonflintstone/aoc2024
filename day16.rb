@@ -13,8 +13,6 @@ class Position
 
   def heuristic = cost + (FINISH[0] - x).abs + (FINISH[1] - y).abs
 
-  def ==(other) = [x, y, dir] == [other.x, other.y, other.dir]
-
   def tile = MAZE[y][x]
 
   def trail = [[x, y], *prev&.trail]
@@ -31,19 +29,13 @@ class Position
   end
 end
 
-def find(char) = MAZE.each_with_index.filter_map { |line, y| (line =~ /#{char}/)&.then { |x| [x, y] } }[0]
+def find(char) = MAZE.each_with_index.filter_map { |line, y| (line =~ /#{char}/)&.then { [_1, y] } }[0]
 
-START = find('S')
-FINISH = find('E')
+def add(position) = NEXT[position.heuristic] = [*NEXT[position.heuristic], position]
 
-def add(position)
-  NEXT[position.heuristic] ||= []
-  NEXT[position.heuristic] << position
-end
+START, FINISH = find('S'), find('E')
 
-NEXT = {}
-PAST = {}
-BEST = []
+NEXT, PAST, BEST = {}, {}, []
 
 add(Position.new(START[0], START[1], RIGHT))
 loop do
@@ -65,4 +57,5 @@ loop do
   end
 end
 
+puts BEST.first.cost
 puts BEST.flat_map(&:trail).uniq.count
