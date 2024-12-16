@@ -1,12 +1,9 @@
-input =  ARGF.read
+puts(ARGF.count do |l|
+  r = l.split.map &:to_i
+  r.each_index.any? do |i|
+    r1 = r.dup
+    r1.delete_at i
 
-reports = input.split("\n").map { _1.split(' ').map(&:to_i) }
-puts(reports.count do |report|
-  report.each_index.any? do |i|
-    considered_report = report.dup.tap { _1.delete_at(i) }
-
-    next false unless considered_report == considered_report.sort || considered_report == considered_report.sort.reverse
-
-    considered_report.each_cons(2).all? { |a, b| (a - b).abs.then { _1 >= 1 && _1 <= 3 } }
+    [1..3,-3..-1].any? { |range| r1.each_cons(2).all? { range.include? _1 - _2 } }
   end
 end)

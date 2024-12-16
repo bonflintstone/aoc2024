@@ -1,25 +1,24 @@
-input = ARGF.read
+# 1
 
-mul_regex = /mul\((\d+),(\d+)\)/
+puts ARGF.read.scan(/mul\((\d+),(\d+)\)/).sum { _1.to_i * _2.to_i }
 
-# Task 1
-# puts input.scan(mul_regex).sum { |a| a.first.to_i * a.last.to_i }
+# 2
 
 all_regex = /(mul\(\d+,\d+\))|(do\(\))|(don't\(\))/
 
 flip = true
 
 puts(input.scan(all_regex).map(&:compact).map(&:first).sum do |match|
-  if match == 'do()'
+  case match
+  when 'do()'
     flip = true 
-    next 0
-  end
-  if match == 'don\'t()'
+    0
+  when 'don\'t()'
     flip = false 
-    next 0
+    0
+  else
+    next 0 unless flip
+
+    match.scan(mul_regex).first.map(&:to_i).reduce(&:*)
   end
-
-  next 0 unless flip
-
-  match.scan(mul_regex).first.then { _1.map(&:to_i).reduce(&:*) }
 end)
