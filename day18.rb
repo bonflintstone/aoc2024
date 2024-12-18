@@ -14,15 +14,9 @@ class Position
     @x, @y, @prev = x, y, prev
   end
 
-  def trail = [*prev&.trail, [x, y]]
-
   def heuristic = (x - FINISH[0]).abs + (y - FINISH[1]).abs + step
 
-  def step = trail.length - 1
-
-  def to_s = "<Position x=#{x} y=#{y} step=#{step}>"
-
-  def inspect = to_s
+  def step = prev ? prev.step.succ : 1
 
   def to_key = "#{x}-#{y}"
 
@@ -30,7 +24,7 @@ class Position
 
   def next
     [[x-1, y], [x+1, y], [x, y+1], [x, y-1]]
-      .filter { |x, y| x >= 0 && x <= FINISH[0] && y >= 0 && y <= FINISH[1] } # bounds
+      .filter { _1 >= 0 && _1 <= FINISH[0] && _2 >= 0 && _2 <= FINISH[1] } # bounds
       .filter { !BYTES[..Position.cutoff].include?(_1) } # bytes
       .map { Position.new(*_1, self) }
   end
