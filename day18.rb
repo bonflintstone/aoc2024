@@ -16,7 +16,7 @@ class Position
 
   def heuristic = (x - FINISH[0]).abs + (y - FINISH[1]).abs + step
 
-  def step = prev ? prev.step.succ : 1
+  def step = prev ? prev.step.succ : 0
 
   def to_key = "#{x}-#{y}"
 
@@ -44,7 +44,10 @@ def test(cutoff)
     return true unless positions&.any?
 
     positions.each do |position|
-      return false if position.finish?
+      if position.finish?
+        puts position.step if Position.cutoff == 1024
+        return false
+      end
 
       next if prev.key?(position.to_key)
 
@@ -54,8 +57,7 @@ def test(cutoff)
   end
 end
 
-result = (0..BYTES.length).bsearch do |cutoff|
-  puts "Testing #{cutoff}.."
-  test(cutoff)
-end
+test(1024)
+
+result = (0..BYTES.length).bsearch { test(_1) }
 puts BYTES[result].to_s
