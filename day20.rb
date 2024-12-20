@@ -1,63 +1,37 @@
 MAP = File.read('./day20input.txt').split
 
-def find(char) = MAP.each_with_index.filter_map { |line, y| (line =~ /#{char}/)&.then { [_1, y] } }[0]
+FINISH = MAP.each_with_index.filter_map { |line, y| (line =~ /E/)&.then { [_1, y] } }.first
 
-START, FINISH = find('S'), find('E')
+def at(x, y) = x.negative? || y.negative? ? '#' : MAP[y][x] rescue '#'
 
-class Position
-  attr_accessor :x, :y, :cost
+def valid_neighbors(x, y) = [[x-1,y],[x+1,y],[x,y-1],[x,y+1]].filter { at(_1, _2) != '#' }
 
-  def initialize(x, y, cost)
-    @x, @y, @cost = x, y, cost
-  end
+DISTANCE_BY_COORD = { FINISH => 0 }
+TO_GRADE = valid_neighbors(*FINISH)
 
-  def to_key = "#{x}-#{y}"
+while TO_GRADE.any? do
+  pos = TO_GRADE.pop
 
-  def heuristic = (FINISH[0] - x).abs + (FINISH[1] - y).abs + cost
+  to_grade, graded = valid_neighbors(*pos).partition { !DISTANCE_BY_COORD[_1] }
 
-  def neighbors
-    [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]
-      .filter { Position.at(_1, _2) != '#' }
-      .map { Position.new(_1, _2, cost + 1) }
-  end
+  TO_GRADE.push(*to_grade)
 
-  def self.at(x, y) = @@map[y][x]
+  DISTANCE_BY_COORD[pos] = graded.map { DISTANCE_BY_COORD[_1] }.min.succ
+end
 
-  def self.find_shortest_path(map)
-    start = Position.new(*START, 0)
+def get_good_jump(max, wanna_save)
+  DISTANCE_BY_COORD.sum do |(x, y), dist_before_jump|
+    (-max..max).sum do |dx|
+      (-(max - dx.abs)..(max - dx.abs)).count do |dy|
+        distance_after_jump = DISTANCE_BY_COORD[[x + dx, y + dy]]
 
-    @@map = map
-    @@done = {}
-    @@todo = { start.heuristic => [start] }
+        next unless distance_after_jump
 
-    loop do
-      cost = @@todo.keys.min
-
-      @@todo.delete(cost).each do |position|
-        return position.cost if at(position.x, position.y) == 'E'
-
-        next if @@done[position.to_key]&.then { _1 < position.heuristic }
-        @@done[position.to_key] = position.heuristic
-
-        position.neighbors.each { @@todo[position.heuristic] = [*@@todo[position.heuristic], _1] }
+        dist_before_jump - (distance_after_jump + dx.abs + dy.abs) >= wanna_save
       end
     end
   end
 end
 
-shortest_path_without_cheating = Position.find_shortest_path(MAP)
-result = MAP.each_index.sum do |y|
-  MAP[y].chars.each_index.count do |x|
-    next if y < 1 || y >= MAP.length - 1
-    next if x < 1 || x >= MAP[y].length - 1
-    next unless MAP[y][x] == '#'
-
-    puts [x, y].to_s
-
-    map = MAP.map(&:dup).tap { _1[y][x] = '.' }
-    new_shortest_path = Position.find_shortest_path(map)
-
-    shortest_path_without_cheating - new_shortest_path >= 100
-  end
-end
-puts result
+puts get_good_jump(2, 100)
+puts get_good_jump(20, 100)
