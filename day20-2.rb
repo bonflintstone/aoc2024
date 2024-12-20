@@ -1,47 +1,37 @@
 MAP = File.read('./day20input.txt').split
 
-def find(char) = MAP.each_with_index.filter_map { |line, y| (line =~ /#{char}/)&.then { [_1, y] } }[0]
-
-START, FINISH = find('S'), find('E')
+FINISH = MAP.each_with_index.filter_map { |line, y| (line =~ /E/)&.then { [_1, y] } }.first
 
 def at(x, y) = x.negative? || y.negative? ? '#' : MAP[y][x] rescue '#'
 
-def valid_neighbors(x, y)
-  [[x-1,y],[x+1,y],[x,y-1],[x,y+1]].filter { at(_1, _2) != '#' }
-end
+def valid_neighbors(x, y) = [[x-1,y],[x+1,y],[x,y-1],[x,y+1]].filter { at(_1, _2) != '#' }
 
 DISTANCE_BY_COORD = { FINISH => 0 }
 TO_GRADE = valid_neighbors(*FINISH)
 
-until TO_GRADE.empty? do
-  x, y = TO_GRADE.pop
+while TO_GRADE.any? do
+  pos = TO_GRADE.pop
 
-  distance = valid_neighbors(x, y).filter_map do |n|
-    if DISTANCE_BY_COORD[n]
-      DISTANCE_BY_COORD[n]
-    else
-      TO_GRADE << n
-      nil
-    end
-  end.min.succ
+  to_grade, graded = valid_neighbors(*pos).partition { !DISTANCE_BY_COORD[_1] }
 
-  DISTANCE_BY_COORD[[x, y]] = distance
+  TO_GRADE.push(*to_grade)
+
+  DISTANCE_BY_COORD[pos] = graded.map { DISTANCE_BY_COORD[_1] }.min.succ
 end
 
-baseline = DISTANCE_BY_COORD[START]
+def get_good_jump(max, wanna_save)
+  DISTANCE_BY_COORD.sum do |(x, y), dist_before_jump|
+    (-max..max).sum do |dx|
+      (-(max - dx.abs)..(max - dx.abs)).count do |dy|
+        distance_after_jump = DISTANCE_BY_COORD[[x + dx, y + dy]]
 
-puts(DISTANCE_BY_COORD.sum do |(x, y), dist_before_jump|
-  (-20..20).sum do |dx|
-    (-(20 - dx.abs)..(20 - dx.abs)).count do |dy|
-      jump_distance = dx.abs + dy.abs
+        next unless distance_after_jump
 
-      distance_after_jump = DISTANCE_BY_COORD[[x + dx, y + dy]]
-
-      next unless distance_after_jump
-
-      saved = dist_before_jump - (distance_after_jump + jump_distance)
-
-      saved >= 100
+        dist_before_jump - (distance_after_jump + dx.abs + dy.abs) >= wanna_save
+      end
     end
   end
-end)
+end
+
+puts get_good_jump(2, 100)
+puts get_good_jump(20, 100)
