@@ -12,65 +12,47 @@ DIRECTIONAL = {
   '<': [0, 1], 'v': [1, 1], '>': [2, 1],
 }
 
-WAYS_MEMO = {}
 def ways_from_to(pad, current, new)
-  WAYS_MEMO[[pad, current, new]] ||= begin
-    cx, cy = current
-    nx, ny = new
+  cx, cy = current
+  nx, ny = new
 
-    return ['A'] if current == new
-    return [] unless pad.values.include?(current)
+  return ['A'] if current == new
+  return [] unless pad.values.include?(current)
 
-    [].tap do |result|
-      result.push(*ways_from_to(pad, [cx, cy + 1], new).map { 'v' + _1 }) if cy < ny
-      result.push(*ways_from_to(pad, [cx + 1, cy], new).map { '>' + _1 }) if cx < nx
-      result.push(*ways_from_to(pad, [cx, cy - 1], new).map { '^' + _1 }) if cy > ny
-      result.push(*ways_from_to(pad, [cx - 1, cy], new).map { '<' + _1 }) if cx > nx
-    end.compact
-  end
+  [].tap do |result|
+    result.push(*ways_from_to(pad, [cx, cy + 1], new).map { 'v' + _1 }) if cy < ny
+    result.push(*ways_from_to(pad, [cx + 1, cy], new).map { '>' + _1 }) if cx < nx
+    result.push(*ways_from_to(pad, [cx, cy - 1], new).map { '^' + _1 }) if cy > ny
+    result.push(*ways_from_to(pad, [cx - 1, cy], new).map { '<' + _1 }) if cx > nx
+  end.compact
 end
 
-def evaluate(pad, code)
-  x, y = pad[:A]
-  result = ''
-  code.chars.each do |char|
-    raise 'hell' if pad.invert[[x, y]] == nil
-    x += 1 if char == '>'
-    x -= 1 if char == '<'
-    y += 1 if char == 'v'
-    y -= 1 if char == '^'
-    result << pad.invert[[x, y]].to_s if char =='A'
+def get_segment_presses(pad, segment)
+  pos = pad[:A]
+  result = ['']
+  segment.chars.map { pad[_1.to_sym] }.each do |new|
+    result = ways_from_to(pad, pos, new).flat_map do |way|
+      result.map { _1 + way }
+    end
+    pos = new
   end
   result
 end
 
-def get_presses(pad, codes)
-  codes.flat_map do |code|
-    old = pad[:A]
-    result = ['']
-    code.chars.map { pad[_1.to_sym] }.each do |new|
-      result = ways_from_to(pad, old, new).flat_map do |way|
-        result.map { _1 + way }
-      end
-      old = new
+MEMO = {}
+def seek(code, max_steps, step = 0)
+  MEMO[[code, max_steps - step]] ||= begin
+    return code.length if step == max_steps
+
+    pad = step.zero? ? NUMERIC : DIRECTIONAL
+
+    code.split(/(?<=A)/).sum do |segment| # split by A while keeping it
+      get_segment_presses(pad, segment).map do |new_code|
+        seek(new_code, max_steps, step.succ)
+      end.min
     end
-    result
   end
 end
 
-puts(input.sum do |line|
-  codes = get_presses(NUMERIC, [line])
-
-  2.times do
-    codes = get_presses(DIRECTIONAL, codes)
-
-    min_length = codes.map(&:length).min
-    puts codes.map(&:length).tally
-
-    codes.filter! { _1.length == min_length }
-
-    puts codes.length
-  end
-
-  codes.first.length * line.to_i
-end)
+puts(input.sum { seek(_1, 3) * _1.to_i })
+puts(input.sum { seek(_1, 26) * _1.to_i })
