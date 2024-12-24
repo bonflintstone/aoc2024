@@ -10,7 +10,9 @@ class Node
     @neighbours = Set.new
   end
 
-  def inspect = "<Node name=#{name} neighbours_count=#{neighbours.size}"
+  def self.all = Set.new(Node.net.values)
+
+  def inspect = "<Node name=#{name} neighbours_count=#{neighbours.size}>"
 
   def self.find_or_add(name) = Node.net[name] ||= Node.new(name)
 
@@ -24,18 +26,21 @@ end
 Node.net ||= {}
 connections = File.read('./day23input.txt').split.each { Node.add_link(*_1.split('-')) }
 
-subnets = Set.new
-Node.net.values.each do |node|
-  node.neighbours.each do |neighbour1|
-    neighbour1.neighbours.each do |neighbour2|
-      next unless neighbour2.neighbours.include?(node)
+def max_clique(r, p, x)
+  return r if p.empty? && x.empty?
 
-      candidate = [node.name, neighbour1.name, neighbour2.name]
+  result = nil
+  p.each do |v|
+    test = max_clique(r.union([v]), p.intersection(v.neighbours), x.intersection(v.neighbours))
 
-      next unless candidate.any? { _1[0] == 't' }
+    result = test if test && (result.nil? || test.size > result.size)
 
-      subnets.add(candidate.sort)
-    end
+    p.delete(v)
+    x.add(v)
   end
+  result
 end
-puts subnets.count
+
+result = max_clique(Set.new, Node.all, Set.new)
+
+puts result.to_a.map(&:name).sort.join(',')
