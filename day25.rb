@@ -15,7 +15,7 @@ schematics.each do |schema|
   if schema[0][0] == '.'
     locks << heights
   else
-    keys << heights 
+    keys << heights
   end
 end
 
