@@ -3,7 +3,7 @@ input, logic = File.read('./day24input.txt').split("\n\n")
 GATES = {} # name: Input/ Gate
 
 class Input
-  attr_accessor :tags, :name, :value
+  attr_accessor :tags, :overwrite, :name
 
   def initialize(name, value)
     @name, @value = name, value
@@ -16,71 +16,92 @@ class Input
 
   def upstream = [self]
 
-  def get_output = @value
+  def get_output 
+    return overwrite unless overwrite.nil?
+    @value
+  end
 end
 
 class Gate
-  attr_accessor :tags, :name
+  attr_accessor :tags, :overwrite, :name
 
-  def initialize(name, in1, in2, op, gates)
-    @name, @in1, @in2, @op, @gates = name, in1, in2, op, gates
+  def initialize(name, in1, in2, op)
+    @name, @in1, @in2, @op = name, in1, in2, op
     @tags = []
   end
 
-  def upstream = [self, *@gates[@in1].upstream, *@gates[@in2].upstream]
+  def upstream
+    [self, *GATES[@in1].upstream, *GATES[@in2].upstream]
+  end
 
-  def inspect = "<#{@name} o=#{get_output} tags=#{tags.tally} op=#{@op} in1=#{@gates[@in1]} in2=#{@gates[@in2]}>"
+  def inspect
+    "<#{@name} o=#{get_output} tags=#{tags.tally} op=#{@op} in1=#{GATES[@in1]} in2=#{GATES[@in2]}>"
+  end
 
   def to_s = "<Gate:#{@name} o=#{get_output}>"
 
   def get_output 
-    # puts [@gates[@in1], @gates[@in2]].map(&:get_output)
-    [@gates[@in1], @gates[@in2]].map(&:get_output).reduce({AND: :&, OR: :|, XOR: :^}[@op.to_sym])
+    return overwrite unless overwrite.nil?
+
+    [GATES[@in1], GATES[@in2]].map(&:get_output).reduce({AND: :&, OR: :|, XOR: :^}[@op.to_sym])
   end
 end
 
-class Machine
-  def initialize(input, logic)
-    @gates = {}
-    input.split("\n").each { g, v = _1.split(': '); @gates[g] = Input.new(g, v.to_i) }
-    logic.split("\n").each { g1, op, g2, _, g3 = _1.split; @gates[g3] = Gate.new(g3, g1, g2, op, @gates) }
-  end
+input.split("\n").each { g, v = _1.split(': '); GATES[g] = Input.new(g, v.to_i) }
+logic.split("\n").each { g1, op, g2, _, g3 = _1.split; GATES[g3] = Gate.new(g3, g1, g2, op) }
 
-  def get_number(char) = @gates.keys.grep(/^#{char}/).sort.map { @gates[it] }.each_with_index.sum { _1.get_output * (2 ** _2) }
+OUTPUT_GATES = GATES.keys.grep(/^z/).sort.map { GATES[it] }
 
-  def get_output(n)
-    @gates["z#{n.to_s.rjust(2, '0')}"]
-  end
+def get_number(char) = GATES.keys.grep(/^#{char}/).sort.map { GATES[it] }.each_with_index.sum { _1.get_output * (2 ** _2) }
 
-  def compute(x = nil, y = nil)
-    @gates.keys.grep(/^x/).sort.each_with_index do |g, i|
-      @gates[g].value = x.to_s(2).reverse[i].to_i
-    end unless x.nil?
+def get_z = OUTPUT_GATES.each_with_index.sum { _1.get_output * (2 ** _2) }
 
-    @gates.keys.grep(/^y/).sort.each_with_index do |g, i|
-      @gates[g].value = y.to_s(2).reverse[i].to_i
-    end unless y.nil?
+SHOULD = (get_number('x') + get_number('y'))
 
-    get_number('z')
-  end
+puts SHOULD.to_s(2)
+
+SHOULD.to_s(2).chars.map(&:to_i).reverse.each_with_index do |bit, i|
+  gate = GATES["z#{i.to_s.rjust(2, '0')}"]
+  tag = gate.get_output == bit ? :good : :bad
+  gate.upstream.each { it.tags << tag }
 end
 
-machine = Machine.new(input, logic)
+def score(result) = SHOULD.to_s(2).chars.zip(result.to_s(2).chars).filter { _1 != _2 }.count
 
-SHOULD = (machine.get_number('x') + machine.get_number('y'))
+DEFAULT_SCORE = score(get_number('z'))
 
-current_swap = 
-(1..10).each do |i|
-  puts machine.get_output(i).upstream.count
-  if machine.compute((2 ** i) - 1, 1) != 2 ** i
-    puts machine.get_output(i)
-    puts machine.get_output(i).upstream.count
-    exit
-  end
+def reset = GATES.values.each { it.overwrite = nil }
+
+def score_swap(swaps)
+  reset
+  swaps.each { it[0].overwrite = it[1] }
+  score(get_number('z'))
 end
 
-# SHOULD.to_s(2).chars.map11(&:to_i).reverse.each_with_index do |bit, i|
-#   gate = GATES["z#{i.to_1s.rjust(2, '0')}"]
-#   tag = gate.get_output == bit ? :good : :bad
-#   gate.upstream.each { it.tags << tag }
-# end
+BAD_GATES = GATES.values.filter { it.tags.include?(:bad) }.map do |gate|
+  swap = [gate, 1 - gate.get_output]
+  [swap, score_swap([swap])]
+end.sort_by(&:last)
+
+MAX_SWAPS = 4
+
+START_INDICES = 0.upto(MAX_SWAPS * 2 - 1).to_a
+indices = START_INDICES.dup
+
+loop do
+  swaps = indices.map { |i| BAD_GATES[i][0] }
+  if swaps.map(&:last).sum == 4
+    score = score_swap(swaps)
+    binding.irb if score == 0
+  end
+
+  index = indices.each_cons(2).find_index { _2 - _1 > 1}
+
+  if index.nil?
+    indices[indices.size - 1] += 1
+    puts indices.last
+  else
+    indices[index] += 1
+    indices[0...index] = START_INDICES[0...index].dup
+  end
+end
